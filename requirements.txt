@@ -1,0 +1,6 @@
+langchain==1.3.4
+langgraph==1.2.4
+langchain-openai
+langchain-google-genai
+pydantic
+streamlit

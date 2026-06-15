@@ -1,0 +1,20 @@
+# 환경 변수 / 시크릿
+.env
+
+# Python 캐시
+__pycache__/
+*.pyc
+
+# uv 가상환경 / 캐시 (uv.lock은 커밋)
+.venv/
+.pytest_cache/
+
+# Jupyter / Colab 체크포인트
+.ipynb_checkpoints/
+
+# 런타임 산출물 (예제 실행 시 생성)
+*.sqlite
+*.db
+
+# macOS
+.DS_Store
