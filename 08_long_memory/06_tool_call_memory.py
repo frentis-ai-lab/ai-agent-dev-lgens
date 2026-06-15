@@ -80,16 +80,19 @@ def main() -> None:
     cfg = {"configurable": {"thread_id": "tool-call-1"}}
 
     # 1) 새 사실을 알려주면 모델이 manage_memory 도구로 스스로 저장합니다.
+    print("[1단계 · 저장] 사용자 발화: '나는 주로 카페에서 일해. 기억해 둬.'")
     agent.invoke(
         {"messages": [{"role": "user", "content": "참고로 나는 주로 카페에서 일해. 기억해 둬."}]}, cfg
     )
-    print("[Tool-call] 모델이 'manage_memory' 도구로 사실을 저장했습니다 (저장 주체는 모델).")
+    print("  → 모델이 manage_memory 도구를 스스로 호출해 저장했습니다 (저장 주체는 개발자가 아니라 모델).")
 
     # 2) 이어 물으면 모델이 search_memory 도구로 회상해 답합니다.
+    print("\n[2단계 · 회상] 사용자 발화: '내가 어디서 일한다고 했는지 기억나?'")
     res = agent.invoke(
         {"messages": [{"role": "user", "content": "내가 어디서 일한다고 했는지 기억나?"}]}, cfg
     )
-    print("[Tool-call]", res["messages"][-1].content)  # 도구로 회상한 '카페'를 답함
+    print("  → 모델이 search_memory 도구로 회상해 답합니다.")
+    print("[Tool-call 응답]", res["messages"][-1].content)  # 도구로 회상한 '카페'를 답함
 
     # 체크포인트: 저장도 회상도 모델이 주도해 '카페'를 답하면 Tool-call 방식을 이해한 것입니다.
 

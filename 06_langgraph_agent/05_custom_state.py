@@ -30,7 +30,8 @@ MODEL = "openai:gpt-5.4-mini"
 
 
 # create_agent의 기본 상태(AgentState)를 상속해 우리가 쓸 필드를 추가합니다.
-# AgentState에는 이미 messages가 들어 있으므로, 필요한 필드만 얹으면 됩니다.
+# AgentState에는 이미 messages가 들어 있으므로, 상속하면 messages는 그대로 두고 필요한 필드만 얹게 됩니다.
+# (클래스 본문에 "이름: 타입"만 적는 것은 타입 힌트로 상태의 칸을 선언하는 방식입니다 — 값 대입이 아닙니다.)
 class SupportState(AgentState):
     user_name: str   # 호출할 때 함께 넘기면 프롬프트·도구에서 읽어 쓸 수 있습니다
     tier: str        # 고객 등급(예: 'VIP', 'general') — 응대 톤을 바꾸는 데 씁니다
@@ -71,19 +72,30 @@ def main() -> None:
 
     agent = build_agent()
 
+    # 무엇을: 질문(messages)은 똑같이 두고 상태(user_name, tier)만 바꿔, 응대가 어떻게 달라지는지 대비합니다.
+    # 같은 질문 + 다른 상태 → 다른 응대가 나오면, 상태가 동적 프롬프트를 거쳐 행동에 반영된 것입니다.
+    QUESTION = "환불 절차가 궁금해요"
+    print("무엇을: 같은 질문에 상태(고객 이름·등급)만 바꿔, 동적 프롬프트가 응대 톤을 바꾸는지 비교합니다.")
+    print(f'공통 질문: "{QUESTION}"\n')
+
     # invoke 입력에 messages뿐 아니라 커스텀 필드(user_name, tier)도 함께 넘깁니다.
     # 같은 질문이라도 tier에 따라 동적 프롬프트가 달라져 응대 톤이 바뀝니다.
-    print("=== VIP 고객 응대 (동적 프롬프트가 '최우선으로 정중하게') ===")
+    print("=== 상태 A: VIP 고객 (동적 프롬프트가 '최우선으로 정중하게') ===")
+    print("  넘긴 상태: user_name='김에너지', tier='VIP'")
     vip = agent.invoke(
-        {"messages": "환불 절차가 궁금해요", "user_name": "김에너지", "tier": "VIP"}
+        {"messages": QUESTION, "user_name": "김에너지", "tier": "VIP"}
     )
-    print("응대:", vip["messages"][-1].content)
+    print("  응대:", vip["messages"][-1].content)
 
-    print("\n=== 일반 고객 응대 (동적 프롬프트가 '친절하게') ===")
+    print("\n=== 상태 B: 일반 고객 (동적 프롬프트가 '친절하게') ===")
+    print("  넘긴 상태: user_name='이배터리', tier='general'")
     general = agent.invoke(
-        {"messages": "환불 절차가 궁금해요", "user_name": "이배터리", "tier": "general"}
+        {"messages": QUESTION, "user_name": "이배터리", "tier": "general"}
     )
-    print("응대:", general["messages"][-1].content)
+    print("  응대:", general["messages"][-1].content)
+
+    print("\n출력 요약: 질문은 한 글자도 안 바꿨지만, 상태(이름·등급)가 다르니 호칭·톤이 달라졌습니다.")
+    print("        상태가 @dynamic_prompt를 거쳐 그 호출의 시스템 프롬프트로 들어간 결과입니다.")
 
     # 체크포인트:
     #   - 같은 질문인데 tier에 따라 응대 톤·호칭이 달라지면, 상태가 프롬프트에 반영된 것입니다.

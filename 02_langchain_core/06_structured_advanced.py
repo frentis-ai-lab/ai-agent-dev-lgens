@@ -36,9 +36,12 @@ def include_raw(model) -> None:
     #   parsing_error  — 파싱 실패 시 예외, 성공이면 None
     # 파싱이 실패해도 예외로 끊기지 않고 parsing_error에 담겨, 원인을 코드로 다룰 수 있습니다.
     structured = model.with_structured_output(Sentiment, include_raw=True)
+    print("받고 싶은 형태:", "Sentiment(label: str)  + include_raw=True")
+    print("입력 문장:", "이번 업데이트 정말 마음에 들어요!")
     result = structured.invoke("이번 업데이트 정말 마음에 들어요!")
 
     # 딕셔너리는 result["키이름"] 형태로 값을 꺼냅니다(대괄호 안에 따옴표로 키를 적습니다).
+    print("받은 dict의 키:", list(result.keys()))     # 예: ['raw', 'parsed', 'parsing_error']
     print("파싱 결과:", result["parsed"])             # Sentiment 객체
     print("파싱 오류:", result["parsing_error"])       # 성공 시 None
     # result["raw"]는 원본 메시지 객체이고, 그 뒤 .usage_metadata로 토큰 정보를 한 번 더 꺼냅니다.
@@ -64,6 +67,8 @@ def nested_schema(model) -> None:
         address: Optional[Address] = Field(default=None, description="거주지, 모르면 비워 둔다")
 
     structured = model.with_structured_output(PersonDetail)
+    print("받고 싶은 형태:", "PersonDetail(name, skills: List[str], address: Address)")
+    print("입력 문장:", "김철수는 파이썬과 자바를 다루고 서울(대한민국)에 산다")
     p = structured.invoke("김철수는 파이썬과 자바를 다루고 서울(대한민국)에 산다")
     print("이름:", p.name, "/ 기술:", p.skills, "/ 주소:", p.address)
     # 예: 이름: 김철수 / 기술: ['파이썬', '자바'] / 주소: city='서울' country='대한민국'

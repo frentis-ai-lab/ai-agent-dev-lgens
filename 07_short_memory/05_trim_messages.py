@@ -45,7 +45,8 @@ def main() -> None:
 
     # 1) 자르기 전: 긴 대화를 만들고 지금 토큰 수를 봅니다 (기준값).
     messages = make_long_conversation()
-    print("[자르기 전] 메시지", len(messages), "개, 토큰~", count_tokens_approximately(messages))
+    before_tokens = count_tokens_approximately(messages)
+    print("[자르기 전] 메시지", len(messages), "개, 토큰~", before_tokens)
 
     # 2) trim_messages로 토큰 상한에 맞춰 잘라 냅니다.
     trimmed = trim_messages(
@@ -58,8 +59,16 @@ def main() -> None:
     )
 
     # 3) 자른 후: 토큰이 줄고, 시스템 메시지가 남았는지 확인합니다.
-    print("[자른 후]  메시지", len(trimmed), "개, 토큰~", count_tokens_approximately(trimmed))
+    after_tokens = count_tokens_approximately(trimmed)
+    print("[자른 후]  메시지", len(trimmed), "개, 토큰~", after_tokens)
     print("[남은 종류]", [type(m).__name__ for m in trimmed])  # 예: ['SystemMessage', 'HumanMessage', ...]
+
+    # 전후 차이를 한 줄로 요약해 자르기 효과를 또렷이 보입니다.
+    print(
+        "[전후 비교] 메시지", len(messages), "개 →", len(trimmed),
+        "개 / 토큰~", before_tokens, "→", after_tokens,
+        f"(상한 max_tokens=120 이하로 줄어듦)",
+    )
 
     # 실전에서는 이 trim 로직을 에이전트 호출 직전에 끼워 넣어 입력 토큰을 통제합니다.
     # (요약 방식은 다음 예제 06에서 다룹니다. 자르기는 버리고, 요약은 압축해 보존합니다.)

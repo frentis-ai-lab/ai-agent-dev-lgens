@@ -103,13 +103,17 @@ def main() -> None:
         index={"dims": 1536, "embed": init_embeddings(EMBED), "fields": ["text"]}
     )
     store.put(NS, "seed", {"text": "앤디는 야간 근무를 선호한다"})
+    print("[저장] 장기 기억 seed =", store.get(NS, "seed").value["text"])
 
     in_graph = build_in_graph_agent(store)
+    question = "내가 선호하는 근무 시간대가 뭐였지?"
+    print("[질문]", question)
+    print("  └ 노드가 store.search로 직접 회상 → 그 사실을 시스템 프롬프트에 끼워 답합니다.")
     res = in_graph.invoke(
-        {"messages": [{"role": "user", "content": "내가 선호하는 근무 시간대가 뭐였지?"}]},
+        {"messages": [{"role": "user", "content": question}]},
         {"configurable": {"thread_id": "in-graph-1"}},
     )
-    print("[In-graph]", res["messages"][-1].content)  # 노드가 seed를 회상해 '야간'을 답함
+    print("[In-graph 응답]", res["messages"][-1].content)  # 노드가 seed를 회상해 '야간'을 답함
 
     # 체크포인트: 코드가 직접 search한 seed 기억으로 '야간'을 답하면 In-graph 회상을 이해한 것입니다.
 

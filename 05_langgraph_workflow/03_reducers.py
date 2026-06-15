@@ -47,8 +47,13 @@ def run_overwrite() -> None:
     b.add_edge("overwrite", END)
     graph = b.compile()
 
-    result = graph.invoke({"messages": [HumanMessage("이 입력은 사라집니다")]})
-    print("[리듀서 없음] 메시지 수:", len(result["messages"]))  # 예: 1 (입력이 덮어써져 사라짐)
+    initial = {"messages": [HumanMessage("이 입력은 사라집니다")]}
+    print("  입력 메시지 수:", len(initial["messages"]), "->", [m.content for m in initial["messages"]])
+    print("  overwrite 노드가 새 메시지 1개를 반환 (리듀서 없음 = 덮어쓰기)")
+
+    result = graph.invoke(initial)
+    print("  최종 메시지 수:", len(result["messages"]), "->", [m.content for m in result["messages"]])
+    print("  [리듀서 없음] 메시지 수:", len(result["messages"]))  # 예: 1 (입력이 덮어써져 사라짐)
 
     # 체크포인트: 입력 메시지가 사라지고 1개만 남으면, 기본 동작이 '덮어쓰기'임을 확인한 것입니다.
 
@@ -71,8 +76,13 @@ def run_accumulate() -> None:
     b.add_edge("add_one", END)
     graph = b.compile()
 
-    result = graph.invoke({"messages": [HumanMessage("이 입력은 남습니다")]})
-    print("[리듀서 있음] 메시지 수:", len(result["messages"]))  # 예: 2 (입력 + 새 메시지가 누적)
+    initial = {"messages": [HumanMessage("이 입력은 남습니다")]}
+    print("  입력 메시지 수:", len(initial["messages"]), "->", [m.content for m in initial["messages"]])
+    print("  add_one 노드가 새 메시지 1개를 반환 (add_messages 리듀서 = 누적)")
+
+    result = graph.invoke(initial)
+    print("  최종 메시지 수:", len(result["messages"]))  # 예: 2 (입력 + 새 메시지가 누적)
+    print("  [리듀서 있음] 입력 메시지가 사라지지 않고 새 메시지 뒤에 쌓였습니다:")
     # 누적된 메시지를 하나씩 꺼내 어떤 순서로 쌓였는지 봅니다.
     for m in result["messages"]:
         # m.type은 메시지 종류(human/ai 등), m.content는 그 내용입니다.
@@ -99,8 +109,13 @@ def run_number_reducer() -> None:
     graph = b.compile()
 
     # 시작값 10에 노드가 돌려준 3이 '더해져' 13이 됩니다(덮어쓰기였다면 3이 됩니다).
-    result = graph.invoke({"total": 10})
-    print("[숫자 리듀서] 10 + 3 =", result["total"])  # 예: 13
+    initial = {"total": 10}
+    print("  입력 상태: total =", initial["total"])
+    print("  add_three 노드가 '부분 값' 3을 반환 (operator.add 리듀서가 더함)")
+
+    result = graph.invoke(initial)
+    print("  최종 상태: total =", result["total"])
+    print("  [숫자 리듀서] 10 + 3 =", result["total"])  # 예: 13
 
     # 체크포인트: 결과가 3이 아니라 13이면, 숫자 칸도 리듀서로 '합치기'가 됨을 확인한 것입니다.
 

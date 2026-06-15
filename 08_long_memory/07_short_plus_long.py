@@ -18,20 +18,22 @@
 키가 없으면 안내만 출력하고 종료합니다 (문법·import 점검은 키 없이도 됩니다).
 """
 
-import os
+import os  # 환경변수(OPENAI_API_KEY) 확인에 씁니다.
+# Annotated[타입, 부가정보]는 타입에 동작(여기서는 메시지 누적)을 덧붙이는 표기입니다.
 from typing import Annotated
 
+# TypedDict는 "어떤 키와 타입을 갖는 dict"인지 미리 선언하는 틀입니다 (그래프 State 정의용).
 from typing_extensions import TypedDict
 
-from dotenv import load_dotenv
-from langchain.chat_models import init_chat_model
-from langchain.embeddings import init_embeddings
-from langchain.messages import SystemMessage
-from langgraph.checkpoint.memory import InMemorySaver  # 단기 메모리
-from langgraph.graph import StateGraph, START, END
-from langgraph.graph.message import add_messages
-from langgraph.store.base import BaseStore
-from langgraph.store.memory import InMemoryStore
+from dotenv import load_dotenv  # .env 파일을 환경변수로 올려 줍니다.
+from langchain.chat_models import init_chat_model  # "벤더:모델명" → 챗 모델 객체
+from langchain.embeddings import init_embeddings  # "벤더:모델명" → 임베딩 모델 객체
+from langchain.messages import SystemMessage  # 모델에게 역할·규칙을 주는 메시지
+from langgraph.checkpoint.memory import InMemorySaver  # 단기 메모리(thread별 상태 저장)
+from langgraph.graph import StateGraph, START, END  # 그래프 뼈대와 시작·끝 표시
+from langgraph.graph.message import add_messages  # 메시지를 덮어쓰지 않고 누적하는 함수
+from langgraph.store.base import BaseStore  # 노드에 주입되는 Store의 공통 타입(타입 힌트용)
+from langgraph.store.memory import InMemoryStore  # 장기 메모리 저장소
 
 load_dotenv()
 
@@ -92,14 +94,18 @@ def main() -> None:
     agent = build_agent(store)
 
     # 같은 thread(session-A)에서 직전 대화를 단기 메모리로 잇습니다.
+    # thread_id가 같으면 checkpointer가 직전 상태를 복원해 대화가 이어집니다.
     config_a = {"configurable": {"thread_id": "session-A"}}
+    print("[1번째 발화 · 같은 thread] '오늘 점심에 김치찌개를 먹었어'")
     agent.invoke(
         {"messages": [{"role": "user", "content": "오늘 점심에 김치찌개를 먹었어"}]}, config_a
     )
+    print("[2번째 발화 · 같은 thread] '내가 점심에 뭐 먹었다고 했지?'")
     res_a = agent.invoke(
         {"messages": [{"role": "user", "content": "내가 점심에 뭐 먹었다고 했지?"}]}, config_a
     )
-    print("[A 단기]", res_a["messages"][-1].content)  # 같은 thread라 '김치찌개'를 단기로 회상
+    # 같은 thread_id라 직전 발화가 단기 메모리에 남아 '김치찌개'를 회상합니다.
+    print("[A 단기 회상]", res_a["messages"][-1].content)
 
     # 체크포인트:
     #   - 같은 thread에서 직전 발화('김치찌개')를 회상하면, 단기 메모리(checkpointer)를 이해한 것입니다.

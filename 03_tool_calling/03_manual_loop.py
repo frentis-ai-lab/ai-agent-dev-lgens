@@ -43,12 +43,15 @@ def manual_loop(model_with_tools, tool_map) -> None:
     """다단계 질문을 tool_calls가 빌 때까지 도는 수동 루프로 처리한다."""
     # 뒤 계산이 앞 결과에 의존하는 다단계 질문입니다 (덧셈 결과에 곱셈을 해야 함).
     # 모델은 덧셈 결과를 본 뒤에야 곱셈의 인자를 채울 수 있으므로, 한 번에 두 도구를 다 부를 수 없습니다.
-    messages = [HumanMessage("3 더하기 5를 한 다음 그 결과에 4를 곱하면?")]
+    question = "3 더하기 5를 한 다음 그 결과에 4를 곱하면?"
+    print("입력 질문:", question)
+    print("기대 흐름: 덧셈(3+5=8) -> 결과 되돌림 -> 곱셈(8*4=32) -> 결과 되돌림 -> 최종 답")
+    messages = [HumanMessage(question)]
 
     # 1차 호출: 모델이 답 대신 첫 도구 호출 요청을 반환합니다.
     ai = model_with_tools.invoke(messages)
     messages.append(ai)  # 대화 기록에 모델의 요청을 그대로 쌓아 둡니다
-    print("[first call]", ai.tool_calls)
+    print("[first call]", ai.tool_calls)  # 첫 바퀴 전, 모델이 먼저 부르겠다고 한 도구
 
     # tool_calls가 빌 때까지 반복하되, 안전판(MAX_TURNS)으로 무한 반복을 막습니다.
     #   - while은 "괄호 안 조건이 참인 동안 안쪽 블록을 되풀이하라"는 반복문입니다.
@@ -59,17 +62,26 @@ def manual_loop(model_with_tools, tool_map) -> None:
     turn = 0
     while ai.tool_calls and turn < MAX_TURNS:
         turn += 1  # turn = turn + 1 의 줄임 표현입니다 (반복 횟수를 하나 늘림).
+        print(f"\n--- 루프 {turn}바퀴 ---")
+        print(f"  모델이 부르라는 도구 {len(ai.tool_calls)}개:", ai.tool_calls)
 
         # 한 응답에 호출이 여러 개일 수 있으므로, for로 전부 순회해 각각 실행합니다.
         for call in ai.tool_calls:
             chosen = tool_map[call["name"]]       # 요청한 이름의 도구를 고릅니다
             result = chosen.invoke(call["args"])  # 실제 함수를 실행합니다
+            # f-string의 { } 안에 변수를 넣어 "도구(인자) = 결과" 한 줄로 출력합니다.
+            print(f"  실행: {call['name']}({call['args']}) = {result}  -> 결과를 모델에 되돌림")
             # tool_call_id를 요청 id와 똑같이 맞춰야 모델이 "이 결과가 그 요청의 답"임을 압니다.
             messages.append(ToolMessage(content=str(result), tool_call_id=call["id"]))
 
         # 결과가 담긴 메시지로 다시 호출합니다. 모델이 다음 도구를 제안하거나 최종 답을 냅니다.
         ai = model_with_tools.invoke(messages)
         messages.append(ai)
+        # 재호출 결과, 모델이 또 도구를 부르려 하면 루프가 한 바퀴 더 돕니다. 비면 곧 빠져나갑니다.
+        if ai.tool_calls:
+            print(f"  -> 모델이 다음 도구를 또 제안했습니다. 루프를 한 바퀴 더 돕니다.")
+        else:
+            print(f"  -> 더 부를 도구가 없습니다(tool_calls 빔). 루프를 빠져나갑니다.")
 
     # while을 빠져나온 뒤, 아직도 tool_calls가 남아 있으면 안전판에 걸린 비정상 종료입니다.
     if ai.tool_calls:
@@ -78,6 +90,7 @@ def manual_loop(model_with_tools, tool_map) -> None:
         return
 
     # 더 부를 도구가 없으면(정상 종료) 모델이 최종 자연어 답변을 완성합니다.
+    print(f"\n총 {turn}바퀴 돌고 정상 종료했습니다. 최종 자연어 답:")
     print("[final]", ai.content)
     # 예: 3 더하기 5는 8이고, 거기에 4를 곱하면 32입니다.
 

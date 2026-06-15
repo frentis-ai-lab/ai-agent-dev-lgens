@@ -34,6 +34,8 @@ def temperature_demo() -> None:
     # 같은 질문(prompt)을 두 모델에 각각 던져 결과를 비교합니다.
     # invoke에 메시지 리스트 대신 문자열 하나만 넣어도 됩니다(자동으로 HumanMessage로 감싸집니다).
     prompt = "회의 시작 인사말을 한 문장으로."
+    print("  같은 질문:", prompt)
+    print("  두 모델 비교: temperature 0.0(일관) vs 1.2(다양)")
     print("[temperature=0.0]", cold.invoke(prompt).content)
     print("[temperature=1.2]", hot.invoke(prompt).content)
     # 예: 두 답의 표현 폭이 다르게 나옵니다(낮은 쪽이 더 무난·반복적).
@@ -43,6 +45,8 @@ def max_tokens_demo() -> None:
     """max_tokens로 답의 최대 길이를 제한한다."""
     # max_tokens는 생성할 수 있는 출력 토큰의 상한입니다(정수). 비용·길이를 통제할 때 씁니다.
     short = init_chat_model(MODEL, max_tokens=20)  # 짧게 끊어 받고 싶을 때
+    print("  질문:", "LangChain을 자세히 소개해줘.")
+    print("  제한: max_tokens=20 (자세히 물어도 20토큰에서 잘림)")
     print("[max_tokens=20]", short.invoke("LangChain을 자세히 소개해줘.").content)
     # 예: 답이 20토큰 부근에서 잘려 짧게 나옵니다.
 
@@ -54,6 +58,8 @@ def streaming_demo() -> None:
     # stream은 토큰이 만들어지는 대로 작은 조각(AIMessageChunk)을 차례로 내놓는 이터레이터를 돌려줍니다.
     # 최종 내용은 invoke와 같고, 받는 방식만 다릅니다(체감 응답이 빨라집니다).
     # print의 end=""는 "출력 끝에 줄바꿈을 넣지 말라", flush=True는 "버퍼에 모으지 말고 즉시 화면에 보이라"는 뜻입니다.
+    print("  질문:", "LangChain을 두 문장으로 소개해줘.")
+    print("  (아래 라벨 뒤로 글자가 조각조각 흘러나옵니다)")
     print("[스트리밍] ", end="", flush=True)
     # for ... in 반복문은 오른쪽(이터레이터)이 내놓는 값들을 하나씩 꺼내 chunk에 담아 블록을 반복 실행합니다.
     # stream은 조각을 만들어지는 대로 내놓으므로, 글자가 흘러나오듯 차례로 출력됩니다.

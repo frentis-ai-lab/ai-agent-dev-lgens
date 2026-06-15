@@ -68,12 +68,16 @@ def main() -> None:
 
     agent = build_agent()
 
+    # 무엇을: 01에서 여러 줄로 손수 배선한 그래프를, create_agent 한 줄이 그대로 만들어 주는지 대조합니다.
+    print("무엇을: create_agent 한 줄로 만든 Agent가 01의 수동 그래프와 같은 루프·같은 답을 내는지 봅니다.\n")
+
     # create_agent가 돌려준 것도 invoke·stream을 가진 컴파일된 그래프입니다.
     # 01의 build_agent_graph()가 돌려준 객체와 같은 종류라, 쓰는 방법도 똑같습니다.
     print("agent 타입:", type(agent).__name__, "/ invoke 보유:", hasattr(agent, "invoke"))
 
     # 입력 형태도 01과 같습니다: {"messages": [...]}. 프리빌트 Agent의 상태가 messages 칸을 쓰기 때문입니다.
-    print("\n=== 도구가 두 번 필요한 질문 (01과 같은 답이 나오는지 대조) ===")
+    print('\n입력: "3 더하기 5를 4와 곱하면?" — add로 8, multiply로 32. 도구가 두 번 필요합니다.')
+    print("=== 도구가 두 번 필요한 질문 (01과 같은 답이 나오는지 대조) ===")
     out = agent.invoke(
         {"messages": [{"role": "user", "content": "3 더하기 5를 4와 곱하면?"}]}
     )

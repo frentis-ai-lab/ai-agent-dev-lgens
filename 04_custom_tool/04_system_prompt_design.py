@@ -50,6 +50,7 @@ def run_tool_loop(model_with_tools, messages: list, tool_map: dict) -> str:
     while ai.tool_calls:
         for call in ai.tool_calls:
             chosen = tool_map[call["name"]]
+            print(f"    → 도구 호출: {call['name']} {call['args']}")  # 프롬프트가 도구를 부르게 했는지 관찰
             try:
                 result = chosen.invoke(call["args"])
             except ToolException as e:
@@ -66,6 +67,8 @@ def _ask_with_prompt(model, system_prompt: SystemMessage) -> str:
     tools = [check_inventory]
     tool_map = {t.name: t for t in tools}
     model_with_tools = model.bind_tools(tools)
+    # 모든 프롬프트가 동일한 이 질문을 받습니다. 달라지는 것은 system_prompt뿐입니다.
+    print("  질문:", "BAT-21700 인천 창고 재고 얼마야?")
     messages = [system_prompt, HumanMessage("BAT-21700 인천 창고 재고 얼마야?")]
     return run_tool_loop(model_with_tools, messages, tool_map)
 
@@ -84,6 +87,7 @@ def good_prompt(model) -> None:
         "비서: 'ICN 창고의 BAT-21700 재고는 1,240개입니다.' "
         "답변은 한국어 한 문장으로, 수량은 천 단위 쉼표와 단위(개)를 함께 표기하라."  # (라) 출력 형식
     )
+    print("  프롬프트: 역할·제약·예시·출력 형식 네 요소를 모두 담음")
     print("[좋은 프롬프트]", _ask_with_prompt(model, prompt))
     # 예: ICN 창고의 BAT-21700 재고는 1,240개입니다.  (도구로 확인 + 형식까지 준수)
     # 체크포인트: 도구로 확인하고 형식(쉼표·'개')까지 지킨 한 문장이 나오면 네 요소가 작동한 것입니다.
@@ -96,6 +100,7 @@ def good_prompt(model) -> None:
 def weak_prompt(model) -> None:
     """규칙·예시·형식이 빠지면 도구 사용·형식이 흔들린다 (good_prompt와 비교)."""
     prompt = SystemMessage("너는 비서다.")
+    print("  프롬프트:", repr("너는 비서다."), "(역할만, 제약·예시·형식 없음)")
     print("[빈약한 프롬프트]", _ask_with_prompt(model, prompt))  # 형식이 들쭉날쭉하거나 추측이 섞일 수 있음
     # 체크포인트: good_prompt와 달리 도구 사용·형식이 흔들리면, 규칙·예시·형식의 빈자리가 곧 품질 차이입니다.
 
@@ -110,6 +115,7 @@ def antipattern_vague(model) -> None:
         "너는 알아서 잘하는 만능 비서다. 최대한 친절하고 최대한 간결하게, "  # '자세히'와 '간결히'가 충돌
         "필요하면 도구를 쓰고 아니면 안 써도 된다."                          # 언제 쓰는지 기준이 없음
     )
+    print("  프롬프트: '최대한 친절+간결'(충돌), '필요하면 도구를'(기준 없음)")
     print("[모호한 지시]", _ask_with_prompt(model, prompt))  # 도구 사용 여부·형식이 호출마다 흔들릴 수 있음
     # 체크포인트: 호출마다 결과가 흔들리면, 측정 불가능·충돌하는 지시가 왜 위험한지 이해한 것입니다.
 
@@ -125,6 +131,7 @@ def antipattern_overload(model) -> None:
         "모든 답은 5문장 이상이어야 한다. 모든 답은 한 단어로 해라. "                # 충돌하는 규칙
         "전문 용어를 많이 써라. 초등학생도 알게 써라. 도구는 가능하면 쓰지 마라."     # 충돌·핵심 흐림
     )
+    print("  프롬프트: 규칙이 너무 많고 서로 충돌(이모지 써라/쓰지 마라 등), 핵심이 묻힘")
     print("[과도한 지시]", _ask_with_prompt(model, prompt))  # 규칙 충돌로 일관성 없는 답이 나오기 쉬움
     # 체크포인트: 좋은 프롬프트만 도구로 확인하고 형식을 지키며, 나머지가 흔들리면 설계의 효과를 이해한 것입니다.
 
@@ -136,6 +143,8 @@ def main() -> None:
 
     model = init_chat_model(MODEL)  # 강의 직전 최신 모델과 가격을 재확인하십시오.
 
+    print("네 가지 프롬프트가 같은 도구·같은 질문을 받습니다. 달라지는 것은 시스템 프롬프트뿐입니다.")
+    print("프롬프트에 따라 도구 사용 여부와 답 형식이 어떻게 갈리는지 비교합니다.\n")
     print("=== 좋은 시스템 프롬프트 (역할·제약·예시·형식) ===")
     good_prompt(model)
     print("\n=== 빈약한 프롬프트 (역할만) ===")

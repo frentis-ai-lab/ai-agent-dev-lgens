@@ -49,6 +49,8 @@ def main() -> None:
     #    init_chat_model은 "벤더:모델명" 문자열을 받아 그 공급사에 맞는 모델 객체를 돌려줍니다.
     #    덕분에 ChatOpenAI 같은 벤더별 클래스를 직접 import할 필요가 없습니다.
     #    = 기호는 "오른쪽 결과를 왼쪽 이름(model)에 담아 둔다"는 대입입니다.
+    print("=== 1) 모델 객체 만들기 ===")
+    print("사용할 모델 문자열:", MODEL)
     model = init_chat_model(MODEL)
     # 객체.속성 형태로 그 객체가 가진 정보를 꺼냅니다. __class__.__name__은 "이 객체의 클래스(종류) 이름"입니다.
     # print(...)는 괄호 안 값을 화면에 출력합니다. 쉼표로 나누면 여러 값을 띄어쓰기로 이어 찍습니다.
@@ -58,10 +60,15 @@ def main() -> None:
     #    .invoke(...)는 model 객체가 가진 메서드(객체에 딸린 함수)를 호출하는 것입니다.
     #    대괄호 [ ]는 리스트(값을 순서대로 담는 묶음)입니다. 여기서는 메시지 한 개만 담았습니다.
     #    HumanMessage("...")는 "사람이 보낸 메시지" 객체를 하나 만드는 것입니다.
-    response = model.invoke([HumanMessage("LCEL이 한 문장으로 뭐야?")])
+    question = "LCEL이 한 문장으로 뭐야?"
+    print("\n=== 2) 모델 한 번 호출하기 ===")
+    print("보낼 질문:", question)
+    print("(모델에 요청 중...)")
+    response = model.invoke([HumanMessage(question)])
 
     # 3) 응답은 단순 문자열이 아니라 AIMessage 객체입니다. 안을 하나씩 들여다봅니다.
     #    type(값)은 그 값의 타입(종류)을 알려 줍니다. .__name__으로 이름만 꺼냅니다.
+    print("\n=== 3) 응답 객체 들여다보기 ===")
     print("응답 타입:", type(response).__name__)        # 예: AIMessage
     print("본문(content):", response.content)            # 사람이 읽는 답변 텍스트
     print("도구 호출(tool_calls):", response.tool_calls)  # 예: []  (도구를 안 붙였으니 비어 있음. 다음 챕터에서 채워집니다)

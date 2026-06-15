@@ -46,7 +46,10 @@ def check_inventory(sku: str, warehouse: str = "ICN") -> str:
 
 def show_tool_failure_without_llm() -> None:
     """LLM 없이도 도구의 실패 동작을 확인한다 (없는 창고 → ToolException)."""
+    print("데이터가 있는 창고:", [w for (_, w) in _STOCK])  # 인천(ICN)·부산(PUS)만 존재
+    print("입력(있는 창고):  {'sku': 'BAT-21700', 'warehouse': 'ICN'}")
     print("[정상] ", check_inventory.invoke({"sku": "BAT-21700", "warehouse": "ICN"}))
+    print("입력(없는 창고):  {'sku': 'BAT-21700', 'warehouse': 'GWJ'}  (광주 데이터 없음)")
     try:
         check_inventory.invoke({"sku": "BAT-21700", "warehouse": "GWJ"})  # 광주 데이터 없음
     except ToolException as e:
@@ -69,12 +72,14 @@ def recovery_loop(model) -> None:
     model_with_tools = model.bind_tools([check_inventory])
 
     # 존재하지 않는 조합(광주 창고)으로 일부러 ToolException을 유발합니다.
+    print("질문:", "BAT-21700 광주(GWJ) 창고 재고 알려줘", "(데이터 없는 창고로 실패 유발)")
     messages = [system_prompt, HumanMessage("BAT-21700 광주(GWJ) 창고 재고 알려줘")]
     ai = model_with_tools.invoke(messages)
     messages.append(ai)
     print("[1차 호출 요청]", ai.tool_calls)        # 모델이 GWJ로 check_inventory를 시도
 
     # 도구를 실행하면 ToolException이 나므로, 그 사유를 ToolMessage로 모델에 회신합니다.
+    print("[2차] 도구 실행 → 실패 사유를 ToolMessage로 모델에 되돌립니다")
     for call in ai.tool_calls:
         try:
             result = check_inventory.invoke(call["args"])
@@ -85,6 +90,7 @@ def recovery_loop(model) -> None:
         messages.append(ToolMessage(content=result, tool_call_id=call["id"]))
 
     # 모델이 실패를 관찰하고 사용자에게 재확인을 요청하는지 봅니다 (지어내지 않아야 합니다).
+    print("[3차] 실패를 관찰한 모델의 최종 응답 (값을 지어내지 않아야 정상)")
     recovered = model_with_tools.invoke(messages)
     print("[회복 응답]", recovered.content)        # "제품 코드와 창고를 다시 확인해 주십시오" 류
 

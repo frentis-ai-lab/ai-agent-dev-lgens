@@ -61,11 +61,14 @@ def multiply(a: int, b: int) -> int:
 
 def step1_inspect_tool_metadata() -> None:
     """@tool이 함수에서 어떤 메타데이터를 자동으로 뽑는지 본다."""
+    print("무엇을 보나: add 함수에 @tool을 붙였더니 어떤 도구 정보가 생겼는지 들여다봅니다.")
+    print("입력      : (없음) — 모델 호출 없이 도구 객체의 속성만 읽습니다.")
     # 도구 객체는 .name·.description·.args 속성으로 모델에 전달될 메타데이터를 들고 있습니다.
     # 객체.속성 형태로 그 객체가 가진 정보를 꺼냅니다.
     print("[name]", add.name)         # 예: add  (함수 이름이 도구 이름이 됨)
     print("[desc]", add.description)  # 예: 두 정수를 더한다.  (docstring이 설명이 됨)
     print("[args]", add.args)         # 예: {'a': {'title': 'A', 'type': 'integer'}, 'b': {...}}
+    print("관찰      : 이름·설명·인자 형식이 함수에서 자동으로 추출되었습니다. 모델은 이 셋만 봅니다.")
 
     # 체크포인트: name·description·args가 함수에서 자동 추출되어 출력되면 성공입니다.
     #   docstring을 비워 두면 모델이 도구의 쓸모를 모르게 됩니다. 설명은 늘 명확히 적습니다.
@@ -77,10 +80,13 @@ def step1_inspect_tool_metadata() -> None:
 
 def step2_invoke_tool_directly() -> None:
     """도구 자체가 잘 동작하는지 모델 없이 직접 확인한다."""
+    print("무엇을 보나: 도구로 바뀐 add를 모델 없이 코드에서 직접 한 번 실행해 봅니다.")
+    print("입력      : add.invoke({'a': 3, 'b': 5})")
     # @tool로 감싼 함수는 .invoke({인자})로 직접 부를 수 있습니다.
     # 중괄호 { }는 딕셔너리(key: value 짝의 묶음)입니다. 인자 이름을 key로 값을 채웁니다.
     # 모델을 붙이기 전에 도구 자체를 단위 테스트하듯 점검할 때 유용합니다.
     print("[direct]", add.invoke({"a": 3, "b": 5}))  # 예: 8
+    print("관찰      : 모델 없이도 8이 나왔으니, 도구 자체는 제대로 동작합니다.")
 
     # 체크포인트: 모델 없이도 도구가 8을 돌려주면, 도구 자체는 준비된 것입니다.
 
@@ -91,6 +97,8 @@ def step2_invoke_tool_directly() -> None:
 
 def step3_bind_tools(model):
     """bind_tools로 모델에 도구 목록을 묶는다 (도구를 실행하지는 않는다)."""
+    print("무엇을 보나: 모델에 add·multiply 두 도구를 알려 주면 무엇이 돌아오는지 봅니다.")
+    print("입력      : model.bind_tools([add, multiply])")
     # bind_tools는 도구 목록을 모델에 묶어, 매 호출마다 도구들의 스키마를 함께 보내도록 합니다.
     # 원본 모델은 그대로 두고, 도구가 묶인 새 사본을 돌려줍니다.
     # 대괄호 [ ]는 리스트(값을 순서대로 담는 묶음)입니다. 도구 두 개를 담았습니다.
@@ -99,6 +107,7 @@ def step3_bind_tools(model):
     # 지금은 묶기만 했습니다. 반환된 객체가 무엇인지만 확인합니다.
     # __class__.__name__은 "이 객체의 클래스(종류) 이름"입니다.
     print("도구를 묶은 모델:", model_with_tools.__class__.__name__)  # 예: RunnableBinding
+    print("관찰      : 도구가 묶인 새 모델이 만들어졌습니다. 아직 부르지는 않았고, 부를 준비만 됐습니다.")
 
     # 체크포인트: 오류 없이 객체가 만들어지면, 모델에 도구를 알려 줄 준비가 끝난 것입니다.
     #   이 묶인 모델을 invoke하면 응답의 tool_calls로 호출 제안이 돌아옵니다(다음 예제 02에서 다룸).

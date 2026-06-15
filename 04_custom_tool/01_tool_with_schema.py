@@ -75,15 +75,20 @@ def check_inventory(sku: str, warehouse: str = "ICN") -> str:
 def show_tool_anatomy() -> None:
     """모델은 함수 본문이 아니라 이름·설명·인자 스키마 세 가지만 본다."""
     # 모델은 이 세 가지(이름·설명·인자 스키마)만 보고 "이 도구를 부를지"를 판단합니다.
+    print("무엇을 보나: 모델이 도구를 부를지 판단할 때 쓰는 세 가지를 그대로 출력합니다.")
+    print("  (함수 본문은 모델이 보지 못합니다. 아래 세 줄이 모델에게 보이는 전부입니다.)")
     print("[name]       ", check_inventory.name)         # 예: check_inventory
     print("[description]", check_inventory.description)  # docstring 내용 (라우팅 근거가 됩니다)
     print("[args]       ", check_inventory.args)         # {'sku': {...}, 'warehouse': {...}} 스키마
     # 체크포인트: name·description·args가 모두 출력되면, 도구가 모델에 어떻게 보이는지 이해한 것입니다.
+    print("정리: 이름은 호출 키, 설명은 라우팅 근거, args는 모델이 채울 인자 명세입니다.")
 
 
 def show_entry_validation() -> None:
     """args_schema로 입력 형식을 도구 '입구'에서 강제한다."""
     # (1) 형식이 틀리면 본문 로직에 닿기 전에 입구(스키마)에서 막힙니다.
+    print("(1) 형식 위반 입력 → 입구에서 차단되어야 함")
+    print("    입력: {'sku': 'xyz'}  (BAT-로 시작하지 않음)")
     try:
         check_inventory.invoke({"sku": "xyz"})           # BAT-로 시작하지 않으므로 차단
         print("[검증] (차단되어야 정상인데 통과했습니다)")
@@ -91,10 +96,14 @@ def show_entry_validation() -> None:
         print("[검증 차단]", e)                          # 예: 제품 코드는 'BAT-'로 시작해야 합니다
 
     # (2) 정상 입력은 정규화를 거쳐 통과합니다 (소문자·공백이 들어와도 대문자로 정리됩니다).
+    print("\n(2) 정상 입력 → 정규화(공백 제거·대문자) 후 통과")
+    print("    입력: {'sku': ' bat-21700 ', 'warehouse': 'ICN'}  (앞뒤 공백·소문자 포함)")
     print("[정상 호출]", check_inventory.invoke({"sku": " bat-21700 ", "warehouse": "ICN"}))
     # 예: ICN 창고의 BAT-21700 재고는 1,240개입니다.
 
     # (3) 형식은 맞지만 데이터가 없으면 ToolException으로 사유를 돌려줍니다.
+    print("\n(3) 형식은 맞지만 데이터 없음 → ToolException으로 사유 회신")
+    print("    입력: {'sku': 'BAT-21700', 'warehouse': 'GWJ'}  (광주 창고 데이터 없음)")
     try:
         check_inventory.invoke({"sku": "BAT-21700", "warehouse": "GWJ"})  # 광주 창고 데이터 없음
     except ToolException as e:

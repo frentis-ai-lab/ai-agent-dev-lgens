@@ -16,14 +16,15 @@
 키가 없으면 안내만 출력하고 종료합니다 (문법·import 점검은 키 없이도 됩니다).
 """
 
-import os
+import os  # 환경변수(OPENAI_API_KEY) 확인에 씁니다.
 
-from dotenv import load_dotenv
-from langchain.embeddings import init_embeddings
-from langgraph.store.memory import InMemoryStore
+from dotenv import load_dotenv  # .env 파일을 환경변수로 올려 줍니다.
+from langchain.embeddings import init_embeddings  # "벤더:모델명" → 임베딩 모델 객체
+from langgraph.store.memory import InMemoryStore  # 장기 메모리 저장소
 
 load_dotenv()
 
+# 임베딩 모델 이름(벤더:모델명). 시맨틱 검색이 텍스트를 벡터로 바꿀 때 씁니다.
 EMBED = "openai:text-embedding-3-small"
 
 
@@ -43,30 +44,34 @@ def main() -> None:
     )
 
     # 네임스페이스의 첫 칸을 사용자 ID로 둡니다. 사용자마다 칸이 나뉘어 기억이 섞이지 않습니다.
+    # namespace는 튜플(괄호로 묶은 값 묶음)로 계층을 표현합니다 — 여기서는 (사용자, 주제) 두 칸.
     ns_andy = ("user-andy", "memories")  # 앤디의 칸
     ns_bora = ("user-bora", "memories")  # 보라의 칸
 
     # 키가 같아도(둘 다 "pref") 칸이 다르면 별개의 기억입니다.
     store.put(ns_andy, "pref", {"text": "앤디는 커피를 즐긴다"})
     store.put(ns_bora, "pref", {"text": "보라는 녹차를 즐긴다"})
+    print("두 사용자 칸에 같은 key 'pref'로 서로 다른 기억을 저장했습니다.")
+    print("  - andy 칸 namespace =", ns_andy)
+    print("  - bora 칸 namespace =", ns_bora)
 
     # 같은 query라도 검색하는 네임스페이스에 따라 그 사용자의 기억만 돌려받습니다.
-    print("[andy] 좋아하는 음료:")
+    # 아래 두 검색은 query가 똑같지만, 넘긴 칸이 다르므로 결과가 격리됩니다.
+    print("\n[같은 query '좋아하는 음료' → 칸마다 다른 결과]")
     for it in store.search(ns_andy, query="좋아하는 음료", limit=1):
-        print("  -", it.value["text"])  # 커피 (앤디 칸)
-
-    print("[bora] 좋아하는 음료:")
+        print("  andy 칸:", it.value["text"])  # 커피 (앤디 칸만 회상)
     for it in store.search(ns_bora, query="좋아하는 음료", limit=1):
-        print("  -", it.value["text"])  # 녹차 (보라 칸)
+        print("  bora 칸:", it.value["text"])  # 녹차 (보라 칸만 회상)
+    print("  → 같은 key·같은 query인데 결과가 다릅니다. 사용자 격리가 동작합니다.")
 
     # 같은 사용자 안에서도 주제별로 칸을 더 나눌 수 있습니다.
     #   ("user-andy", "preferences") 에는 취향, ("user-andy", "history") 에는 이력을
     #   두면, 취향만 검색할 때 이력이 딸려 오지 않습니다.
     store.put(("user-andy", "preferences"), "tone", {"text": "앤디는 격식체 답변을 선호한다"})
     store.put(("user-andy", "history"), "h1", {"text": "앤디는 지난주 환불을 문의했다"})
-    print("[andy/preferences] 답변 말투 취향:")
+    print("\n[같은 사용자 안에서도 주제 칸을 분리]")
     for it in store.search(("user-andy", "preferences"), query="답변 말투 취향", limit=1):
-        print("  -", it.value["text"])  # 격식체 (이력은 끼지 않음)
+        print("  preferences 칸:", it.value["text"])  # 격식체 (history의 환불 이력은 끼지 않음)
 
     # 체크포인트:
     #   - 같은 키('pref')·같은 query인데 앤디 칸과 보라 칸 결과가 다르면, 사용자 격리가 된 것입니다.

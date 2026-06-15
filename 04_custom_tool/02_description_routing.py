@@ -32,6 +32,8 @@ MODEL = "openai:gpt-5.4-mini"
 # 두 도구의 '동작'은 똑같습니다. 다른 것은 오직 docstring(description)뿐입니다.
 # ===========================================================================
 
+# 함수 바로 아래 """..."" 문자열(docstring)이 그대로 도구의 description이 됩니다.
+# 모델은 이 description만 보고 도구를 고르므로, docstring이 곧 "사용 설명서"입니다.
 @tool("weather_good")
 def weather_good(city: str) -> str:
     """특정 도시의 현재 날씨(기온·강수)를 조회한다.
@@ -41,7 +43,7 @@ def weather_good(city: str) -> str:
 
 @tool("weather_bad")
 def weather_bad(city: str) -> str:
-    """처리한다."""  # 안티패턴: 무엇을·언제 쓰는지 알 수 없는 모호한 설명
+    """처리한다."""  # 안티패턴: 무엇을·언제 쓰는지 알 수 없는 모호한 설명 (반환 동작은 위와 동일)
     return f"{city}: 맑음, 23도"
 
 
@@ -49,6 +51,8 @@ def good_description(model) -> None:
     """좋은 설명을 단 도구는 모델이 의도를 정확히 매칭해 부른다."""
     # bind_tools는 "이 도구들을 쓸 수 있다"고 모델에 알려 주는 것입니다 (아직 실행은 안 함).
     good = model.bind_tools([weather_good])
+    print("  도구 설명:", weather_good.description.splitlines()[0], "...")  # 모델이 보는 설명의 첫 줄
+    print("  질문:", "부산 날씨 알려줘")
     # tool_calls는 "이 도구를 이렇게 불러 달라"는 모델의 제안 목록입니다.
     print("[좋은 설명] tool_calls:", good.invoke([HumanMessage("부산 날씨 알려줘")]).tool_calls)
     # 예: [{'name': 'weather_good', 'args': {'city': '부산'}, ...}]  (도구를 정확히 호출)
@@ -58,6 +62,8 @@ def good_description(model) -> None:
 def bad_description(model) -> None:
     """같은 동작이라도 설명이 빈약하면 라우팅이 흔들린다 (good_description과 비교)."""
     bad = model.bind_tools([weather_bad])
+    print("  도구 설명:", repr(weather_bad.description))  # 모델이 보는 설명: 모호한 한 단어뿐
+    print("  질문:", "부산 날씨 알려줘", "(좋은 설명과 동일한 질문)")
     bad_ai = bad.invoke([HumanMessage("부산 날씨 알려줘")])
     print("[빈약한 설명] tool_calls:", bad_ai.tool_calls)  # 비어 있을 수 있음(라우팅 실패)
     print("[빈약한 설명] content :", bad_ai.content)        # 도구 대신 추측 답변이 나올 수 있음
@@ -74,6 +80,8 @@ def main() -> None:
 
     model = init_chat_model(MODEL)  # 강의 직전 최신 모델과 가격을 재확인하십시오.
 
+    print("두 도구는 반환 동작이 똑같습니다. 다른 것은 오직 docstring(description)뿐입니다.")
+    print("같은 질문을 던져 설명의 차이만으로 라우팅이 어떻게 갈리는지 비교합니다.\n")
     print("=== 좋은 설명 → 라우팅 성공 ===")
     good_description(model)
     print("\n=== 빈약한 설명 → 라우팅 흔들림 ===")

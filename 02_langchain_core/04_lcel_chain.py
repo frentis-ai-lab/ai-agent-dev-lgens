@@ -53,14 +53,16 @@ def run_chain(model, prompt: ChatPromptTemplate) -> None:
     # | 기호는 LangChain에서 "앞 단계와 뒤 단계를 이어 붙이는" 연결 연산자로 쓰입니다(LCEL 파이프).
     # 파이프는 앞 단계의 출력이 다음 단계의 입력이 되도록 합성합니다(왼쪽에서 오른쪽으로 흐름).
     chain = prompt | model
+    print("연결한 체인:", "prompt | model (프롬프트 → 모델 순서로 흐름)")
 
     # 이제 체인을 한 번에 호출합니다. 변수 값만 딕셔너리로 넘기면 됩니다.
     # chain도 invoke를 가진 하나의 실행 단위라, 모델을 직접 부르는 것과 같은 방식으로 씁니다.
+    print("채울 변수:", {"역할": "교사", "질문": "LCEL을 한 문장으로 설명해줘"})
     result = chain.invoke({"역할": "교사", "질문": "LCEL을 한 문장으로 설명해줘"})
-    print("\n[체인 답변]", result.content)
+    print("[체인 답변]", result.content)
 
     # 틀(체인)은 그대로 두고 입력만 바꿔 여러 번 재사용합니다.
-    print("\n[재사용 — 역할만 교체]")
+    print("\n[재사용 — 질문은 같고 역할만 교체]")
     print("  [교사]", chain.invoke({"역할": "교사", "질문": "RAG가 뭐야?"}).content)
     print("  [면접관]", chain.invoke({"역할": "면접관", "질문": "RAG가 뭐야?"}).content)
     # 체크포인트: 역할만 바꿨는데 답의 톤이 달라지면 체인 재사용을 이해한 것입니다.
@@ -76,6 +78,8 @@ def escape_braces(model) -> None:
         ("human", "{질문}"),
     ])
     chain = prompt | model
+    print("  시스템 규칙(이스케이프):", '다음 JSON 형식으로만 답한다: {{"answer": "..."}}')
+    print("  질문:", "하늘은 무슨 색이야?")
     print("[이스케이프된 양식의 답]", chain.invoke({"질문": "하늘은 무슨 색이야?"}).content)
     # 예: {"answer": "파란색"} 형태로 답합니다(중괄호가 변수로 오인되지 않음).
 

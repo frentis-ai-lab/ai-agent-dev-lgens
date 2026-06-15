@@ -67,11 +67,19 @@ def main() -> None:
 
     # 5) invoke로 한 번 실행합니다. 입력은 "상태 형태의 딕셔너리"입니다.
     #    중괄호 { } 그 자체는 딕셔너리(key: value 짝의 묶음)입니다.
-    result = graph.invoke({"topic": "LangGraph", "result": ""})
+    initial_state = {"topic": "LangGraph", "result": ""}
+
+    # 그래프에 넣기 전 상태를 먼저 출력해, 노드를 거치며 무엇이 바뀌는지 비교할 수 있게 합니다.
+    print("=== START → echo → END 그래프를 한 번 실행합니다 ===")
+    print("1) 입력 상태:", initial_state)        # result는 아직 빈 문자열입니다.
+    print("2) echo 노드 통과 중 ...")            # 이 한 노드가 result 칸을 채웁니다.
+
+    result = graph.invoke(initial_state)
 
     # 결과도 상태 딕셔너리입니다. echo 노드가 채운 result 칸을 꺼내 출력합니다.
-    print("입력 글감:", result["topic"])     # 입력은 그대로 남아 있습니다.
-    print("노드 산출물:", result["result"])   # 예: 입력받은 글감: LangGraph
+    print("3) 최종 상태:", result)               # result 칸이 채워진 상태 전체를 봅니다.
+    print("   - topic (입력 유지):", result["topic"])   # 입력은 그대로 남아 있습니다.
+    print("   - result (노드 산출):", result["result"]) # 예: 입력받은 글감: LangGraph
 
     # 체크포인트:
     #   - State에 어떤 칸을 둘지부터 정한다는 점을 이해하면 출발 준비가 된 것입니다.

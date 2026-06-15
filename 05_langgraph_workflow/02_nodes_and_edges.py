@@ -60,10 +60,14 @@ def run_unconnected(model) -> None:
     b.add_edge("write_draft", END)      # 1단계만 돌고 끝납니다.
     graph = b.compile()
 
-    result = graph.invoke({"topic": "재택근무의 장점", "draft": "", "polished": ""})
-    print("[초안]     ", result["draft"])
+    initial_state = {"topic": "재택근무의 장점", "draft": "", "polished": ""}
+    print("  입력 상태: topic=%r, draft=빈칸, polished=빈칸" % initial_state["topic"])
+    print("  경로: START → write_draft → END  (polish는 엣지가 없어 건너뜀)")
+
+    result = graph.invoke(initial_state)
+    print("  [초안]      ", result["draft"])         # write_draft가 채운 칸
     # or 뒤의 값은 앞 값이 비어 있을(빈 문자열) 때 대신 출력할 안내입니다.
-    print("[다듬은 글]", result["polished"] or "(아직 비어 있음 — polish를 엣지로 잇지 않았습니다)")
+    print("  [다듬은 글] ", result["polished"] or "(아직 비어 있음 — polish를 엣지로 잇지 않았습니다)")
 
     # 체크포인트: 노드를 등록만 하고 엣지로 잇지 않으면 그 노드는 실행되지 않음을 확인하면 됩니다.
 
@@ -88,9 +92,13 @@ def run_connected(model) -> None:
     b.add_edge("polish", END)            # 2단계 → 종료
     graph = b.compile()
 
-    result = graph.invoke({"topic": "재택근무의 장점", "draft": "", "polished": ""})
-    print("[초안]     ", result["draft"])
-    print("[다듬은 글]", result["polished"])
+    initial_state = {"topic": "재택근무의 장점", "draft": "", "polished": ""}
+    print("  입력 상태: topic=%r, draft=빈칸, polished=빈칸" % initial_state["topic"])
+    print("  경로: START → write_draft → polish → END  (두 노드를 차례로 거침)")
+
+    result = graph.invoke(initial_state)
+    print("  [초안]      ", result["draft"])      # 1단계 write_draft가 먼저 채움
+    print("  [다듬은 글] ", result["polished"])   # 2단계 polish가 그 draft를 받아 채움
 
     # 체크포인트: draft가 먼저 채워지고 그 값을 polish가 받아 다듬으면 순서 연결이 동작한 것입니다.
 

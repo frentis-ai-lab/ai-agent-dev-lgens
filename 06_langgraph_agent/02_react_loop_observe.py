@@ -51,17 +51,21 @@ class State(TypedDict):
 def build_agent_graph():
     """01과 동일한 수동 Agent 그래프(모델 → ToolNode → 조건부 엣지 → 순환)를 컴파일한다."""
     tools = [add, multiply]
+    # bind_tools: 모델에게 "이 도구들을 쓸 수 있다"고 알려, 모델이 도구 호출을 답으로 낼 수 있게 묶습니다.
     model_with_tools = init_chat_model(MODEL).bind_tools(tools)
 
     def call_model(state: State):
+        # 현재까지 쌓인 messages를 모델에 넣고, 모델이 낸 답(텍스트 또는 도구 호출)을 messages에 더합니다.
         return {"messages": [model_with_tools.invoke(state["messages"])]}
 
     builder = StateGraph(State)
     builder.add_node("model", call_model)
+    # ToolNode: 모델이 요청한 도구 호출을 실제로 실행해 결과(ToolMessage)를 만들어 주는 노드입니다.
     builder.add_node("tools", ToolNode(tools))
     builder.add_edge(START, "model")
+    # tools_condition: 모델의 마지막 답을 보고 분기합니다. 도구 호출이 있으면 "tools"로, 없으면 END로 보냅니다.
     builder.add_conditional_edges("model", tools_condition)
-    builder.add_edge("tools", "model")
+    builder.add_edge("tools", "model")   # 도구 결과(관찰)를 들고 다시 모델로 — 이 되돌아오는 엣지가 ReAct 순환을 만듭니다.
     return builder.compile()
 
 
@@ -117,8 +121,17 @@ def main() -> None:
         return
 
     agent = build_agent_graph()
+
+    # 무엇을 보려는가: invoke는 "최종 답만" 주지만, stream은 "매 단계의 중간 결과"를 흘려보냅니다.
+    # 같은 질문을 두 가지 stream_mode로 흘려, 추론-행동-관찰 루프가 도는 모습을 두 각도에서 봅니다.
+    print("무엇을: 추론-행동-관찰(ReAct) 루프가 한 번의 호출 안에서 여러 바퀴 도는 모습을 stream으로 관찰합니다.")
+    print('입력: "3 더하기 5를 4와 곱하면?" — add로 8, multiply로 32. 도구가 두 번 필요합니다.\n')
+
     observe_values(agent)
     observe_updates(agent)
+
+    print("\n출력 요약: 위 흐름에서 AIMessage(도구 호출)와 ToolMessage(관찰)가 번갈아 나오다,")
+    print("        도구 호출이 더 없는 마지막 AIMessage(최종 답 32)에서 루프가 끝났습니다.")
 
 
 if __name__ == "__main__":

@@ -44,12 +44,14 @@ def step1_count_multiple_calls(model_with_tools):
     """서로 의존하지 않는 두 질문에 호출이 몇 개 담기는지 개수를 확인한다."""
     # 서로 의존하지 않는 질문(서울 날씨, 도쿄 날씨)은 모델이 한 응답에 여러 호출을 담을 수 있습니다.
     # 03의 다단계 질문과 달리, 둘째 호출의 인자가 첫째 결과에 의존하지 않기 때문입니다.
+    print("입력 질문: 서울이랑 도쿄 날씨를 둘 다 알려줘.")
     ai = model_with_tools.invoke([HumanMessage("서울이랑 도쿄 날씨를 둘 다 알려줘.")])
 
     # tool_calls가 한 개가 아니라 여러 개일 수 있습니다. len(리스트)은 항목 개수를 셉니다.
     print("[num calls]", len(ai.tool_calls))  # 예: 2 (서울 호출 + 도쿄 호출)
     for call in ai.tool_calls:
         print("  -", call["args"])  # 예: {'city': '서울'}, {'city': '도쿄'}
+    print("관찰      : 서로 무관한 두 질문이라 한 응답에 호출이 여러 개 담겼습니다.")
 
     # 체크포인트: 호출이 2개로 잡히면, 다음 스텝에서 "전부" 순회해야 하는 이유가 보입니다.
     return ai
@@ -67,6 +69,7 @@ def step2_iterate_all_calls(model_with_tools, ai) -> None:
     # 핵심: 호출이 몇 개든 "전부" 순회하며 각각 실행하고, 각각에 대응하는 ToolMessage를 되돌려야 합니다.
     #   하나라도 빠뜨리면 모델은 답이 안 온 요청을 기다리며 최종 답을 못 냅니다.
     #   각 ToolMessage의 tool_call_id를 그 호출의 id와 맞춰, 어느 결과가 어느 호출의 답인지 짝지웁니다.
+    print(f"호출 {len(ai.tool_calls)}개를 전부 순회하며 실행합니다(입력 -> 결과):")
     for call in ai.tool_calls:
         result = TOOL_MAP[call["name"]].invoke(call["args"])
         # f"..."는 f-string으로, 문자열 안 { } 자리에 변수 값을 끼워 넣습니다.
@@ -75,6 +78,7 @@ def step2_iterate_all_calls(model_with_tools, ai) -> None:
 
     # 두 결과가 모두 담긴 메시지로 다시 호출하면, 모델이 두 도시 날씨를 한 답에 모읍니다.
     final = model_with_tools.invoke(messages)
+    print("두 결과를 모두 되돌린 뒤 받은 최종 답:")
     print("[final]", final.content)  # 예: 서울은 맑음 22도, 도쿄는 흐림 19도입니다.
 
     # 체크포인트: len(tool_calls)와 붙인 ToolMessage 개수가 같고, 두 도시 날씨가 한 답에 모이면 성공입니다.
@@ -86,6 +90,7 @@ def step2_iterate_all_calls(model_with_tools, ai) -> None:
 
 def step3_parallel_control(model) -> None:
     """parallel_tool_calls로 한 응답에 여러 호출을 담을지(True) 하나만 담을지(False) 제어한다."""
+    print("입력 질문: 서울, 도쿄, 보스턴 날씨를 모두 알려줘. (같은 질문을 on/off 두 설정으로 비교)")
     # 기본값은 병렬 허용(parallel_tool_calls=True)이라, 서로 무관한 호출은 한 응답에 여러 개가 담깁니다.
     parallel_on = model.bind_tools([get_weather])  # 명시하지 않으면 병렬 허용이 기본
     ai_on = parallel_on.invoke([HumanMessage("서울, 도쿄, 보스턴 날씨를 모두 알려줘.")])

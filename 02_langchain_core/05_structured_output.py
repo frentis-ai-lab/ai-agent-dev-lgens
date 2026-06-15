@@ -39,6 +39,8 @@ def structured_basic(model) -> None:
     # 인자로 클래스 자체(Person)를 넘깁니다. ( )가 없으니 "실행"이 아니라 "그 틀을 가리킴"입니다.
     # 내부적으로는 스키마를 모델에 함께 건네 출력을 그 형태로 강제하고, 응답을 Person으로 파싱합니다.
     structured = model.with_structured_output(Person)
+    print("받고 싶은 형태:", "Person(name: str, age: int)")
+    print("입력 문장:", "홍길동은 30살이다")
     person = structured.invoke("홍길동은 30살이다")
 
     # 반환값이 곧 Person 객체이므로 문자열 파싱 없이 필드에 바로 접근합니다(person.name처럼).
@@ -57,6 +59,7 @@ def field_descriptions(model) -> None:
         price: int = Field(description="가격, 숫자만(원 단위, 쉼표 없이)")
 
     structured = model.with_structured_output(Product)
+    print("입력 문장:", "이 노트북은 1,250,000원입니다 (쉼표 포함)")
     p = structured.invoke("이 노트북은 1,250,000원입니다")
     print("제품:", p.name, "/ 가격:", p.price)  # 예: 제품: 노트북 / 가격: 1250000
     # 체크포인트: price가 쉼표 없는 정수로 나오면 description 지시가 먹힌 것입니다.
@@ -71,6 +74,7 @@ def optional_fields(model) -> None:
         age: Optional[int] = Field(default=None, description="만 나이, 모르면 비워 둔다")
 
     structured = model.with_structured_output(Person)
+    print("입력 문장:", "내 이름은 앤디야 (나이 정보 없음)")
     p = structured.invoke("내 이름은 앤디야")  # 나이 정보가 없는 입력
     print("이름:", p.name, "/ 나이:", p.age)  # 예: 이름: 앤디 / 나이: None (없는 값을 지어내지 않음)
     # 체크포인트: 나이가 None으로 나오면 안전하게 동작하는 것입니다.

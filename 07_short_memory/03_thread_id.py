@@ -59,6 +59,7 @@ def main() -> None:
     config_a = {"configurable": {"thread_id": make_thread_id("emp-042", "room-7")}}
     print("[thread A]", config_a["configurable"]["thread_id"])
 
+    print("  [A 1턴] 보냄:", "내 이름은 앤디야. 기억해 줘.")
     agent.invoke(
         {"messages": [{"role": "user", "content": "내 이름은 앤디야. 기억해 줘."}]},
         config_a,
@@ -67,18 +68,25 @@ def main() -> None:
         {"messages": [{"role": "user", "content": "내 이름이 뭐였지?"}]},
         config_a,  # 같은 thread_id이면 앞 대화가 복원되어 이어집니다.
     )
-    print("  [같은 thread 2턴]", r_a["messages"][-1].content)  # "앤디"라고 답하면 정상
+    print("  [A 2턴] 물음:", "내 이름이 뭐였지?")
+    print("  [A 2턴] 답변:", r_a["messages"][-1].content)  # "앤디"라고 답하면 정상
+    print("  [A 누적 메시지 수]", len(r_a["messages"]), "(1턴·2턴이 같은 thread에 쌓임)")
 
     # --- 2) thread_id를 바꾸면: 맥락이 끊긴다 (의도된 격리) ---
     # 같은 직원이라도 다른 대화방(room-9)은 별개의 thread_id이므로 백지에서 출발합니다.
     config_b = {"configurable": {"thread_id": make_thread_id("emp-042", "room-9")}}
-    print("[thread B]", config_b["configurable"]["thread_id"])
+    print("\n[thread B]", config_b["configurable"]["thread_id"])
 
     r_b = agent.invoke(
         {"messages": [{"role": "user", "content": "내 이름이 뭐였지?"}]},
         config_b,  # 다른 thread_id이므로 A의 기억은 여기에 없습니다.
     )
-    print("  [다른 thread]", r_b["messages"][-1].content)  # 이름을 모른다고 답하면 정상
+    print("  [B 1턴] 물음:", "내 이름이 뭐였지?")
+    print("  [B 1턴] 답변:", r_b["messages"][-1].content)  # 이름을 모른다고 답하면 정상
+    print("  [B 누적 메시지 수]", len(r_b["messages"]), "(A의 대화는 들어오지 않아 이 턴만 쌓임)")
+
+    # 같은 질문인데 thread만 달라 답이 갈리는 것을 한눈에 대비합니다.
+    print("\n[비교] 같은 질문 '내 이름이 뭐였지?'에 thread A는 기억하고, thread B는 모릅니다(thread별 격리).")
 
     # 체크포인트:
     #   - thread A에서는 "앤디"를 기억하고, thread B에서는 모른다고 답하면 thread별 격리에 성공한 것입니다.

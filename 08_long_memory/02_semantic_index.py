@@ -16,11 +16,13 @@
 키가 없으면 안내만 출력하고 종료합니다 (문법·import 점검은 키 없이도 됩니다).
 """
 
-import os
+import os  # 환경변수(OPENAI_API_KEY) 확인에 씁니다.
 
+# load_dotenv는 같은 폴더의 .env 파일을 읽어 환경변수로 올려 주는 함수입니다.
 from dotenv import load_dotenv
 # init_embeddings는 "벤더:모델명" 문자열로 임베딩 모델 객체를 만드는 v1 표준 함수입니다.
 from langchain.embeddings import init_embeddings
+# InMemoryStore는 장기 메모리를 RAM에 담는 저장소입니다. index= 설정을 주면 시맨틱 검색이 켜집니다.
 from langgraph.store.memory import InMemoryStore
 
 # .env 파일이 있으면 환경변수로 읽어 들입니다 (로컬 실행 시 키를 .env에 둡니다).
@@ -61,18 +63,24 @@ def main() -> None:
     store.put(NS, "fact-2", {"text": "앤디는 매운 음식을 못 먹는다"})
     store.put(NS, "fact-3", {"text": "앤디는 주말마다 등산을 간다"})
 
+    print("저장한 기억 3건: 파이썬 / 매운 음식 / 주말 등산")
+
     # 3) query에 '파이썬'이라는 단어가 직접 없어도, 의미가 가까운 기억이 위로 올라옵니다.
     #    limit는 상위 몇 개를 받을지 정합니다. 여기서는 1개만 받습니다.
-    print("[query] 좋아하는 프로그래밍 언어")
+    print("\n[query] '좋아하는 프로그래밍 언어' (limit=1)")
+    print("  └ query에 '파이썬'이 없지만 의미가 가까운 기억이 회상됩니다:")
     for it in store.search(NS, query="좋아하는 프로그래밍 언어", limit=1):
-        print("  -", it.value["text"])  # 예: 앤디는 파이썬을 좋아한다
+        # it.score는 0~1 사이 유사도 점수입니다(클수록 가깝습니다).
+        print("    회상:", it.value["text"], "| 유사도", round(it.score, 3))
 
     # 4) search 결과의 각 항목에는 it.score(유사도)가 담깁니다. 높을수록 query에 가깝습니다.
     #    상위 2개를 점수와 함께 받아, 가장 관련 있는 기억이 맨 위에 오는지 봅니다.
     #    round(값, 3)은 소수점 셋째 자리까지 반올림해 읽기 좋게 만듭니다.
-    print("[query] 주말 취미 활동 (상위 2개, 점수 포함)")
-    for it in store.search(NS, query="주말 취미 활동", limit=2):
-        print("  ", round(it.score, 3), it.value["text"])  # 등산 기억이 가장 높은 점수로
+    print("\n[query] '주말 취미 활동' (limit=2, 점수 높은 순)")
+    # enumerate(..., start=1)는 순번(1, 2, ...)과 항목을 함께 꺼냅니다 (몇 위인지 표시용).
+    for rank, it in enumerate(store.search(NS, query="주말 취미 활동", limit=2), start=1):
+        # 1위가 '등산'이면 의미 기반 정렬이 동작한 것입니다 (점수가 높을수록 위).
+        print(f"    {rank}위 | 유사도 {round(it.score, 3)} | {it.value['text']}")
 
     # 변형 포인트: limit를 키우면 덜 관련된 기억까지 끌려와 노이즈가 늘고,
     #            줄이면 회상이 빈약해집니다. 회상 개수는 품질과 토큰의 트레이드오프입니다.

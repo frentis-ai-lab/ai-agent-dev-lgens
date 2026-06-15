@@ -54,6 +54,7 @@ QUESTION = "3 더하기 5는 얼마야?"
 
 def step1_observe_tool_calls(model_with_tools):
     """계산 질문을 던지면 모델이 답(content) 대신 tool_calls를 돌려주는 것을 본다."""
+    print("입력 질문:", QUESTION)
     # 계산이 필요한 질문을 던지면, 모델은 답을 직접 쓰지 않고 "이 도구를 이렇게 불러 달라"고 제안합니다.
     # 핵심: 모델은 도구를 실행하지 않습니다. 실행은 우리 코드의 몫입니다(제안과 실행의 분리).
     ai = model_with_tools.invoke([HumanMessage(QUESTION)])
@@ -62,6 +63,7 @@ def step1_observe_tool_calls(model_with_tools):
     # repr(값)은 그 값을 따옴표까지 보이게 출력해, 빈 문자열('')도 한눈에 구분되게 합니다.
     print("[content]   ", repr(ai.content))  # 예: '' (아직 최종 답이 아니므로 비어 있음)
     print("[tool_calls]", ai.tool_calls)
+    print("관찰        : content는 비었고, 모델의 의도는 tool_calls에 담겼습니다(답이 아니라 도구 호출 제안).")
     # 예: [{'name': 'add', 'args': {'a': 3, 'b': 5}, 'id': 'call_abc', 'type': 'tool_call'}]
 
     # 체크포인트: content가 비고 tool_calls에 add 호출 요청이 담기면, 모델이 "도구를 쓰겠다"고 판단한 것입니다.
@@ -97,6 +99,7 @@ def step3_run_tool_call_by_hand(ai) -> None:
     # 첫 요청을 꺼내, 이름으로 도구를 고르고 args를 그대로 넣어 실제 함수를 실행합니다.
     call = ai.tool_calls[0]
     chosen = TOOL_MAP[call["name"]]       # 요청한 이름의 도구를 사전에서 고릅니다
+    print(f"실행할 도구: {call['name']}, 넣을 인자: {call['args']}")
     result = chosen.invoke(call["args"])  # 모델이 채운 args를 그대로 넣어 실행합니다
     print("[실행 결과]", result)          # 예: 8
 
@@ -120,6 +123,7 @@ def step4_return_with_tool_message(model_with_tools, ai) -> None:
     call = ai.tool_calls[0]
     result = TOOL_MAP[call["name"]].invoke(call["args"])
     messages.append(ToolMessage(content=str(result), tool_call_id=call["id"]))
+    print(f"되돌릴 결과: {result} (tool_call_id={call['id']} 로 요청과 짝지음)")
 
     # 결과가 담긴 메시지로 다시 호출하면, 모델이 비로소 자연어 최종 답을 작성합니다.
     final = model_with_tools.invoke(messages)

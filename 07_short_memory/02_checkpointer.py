@@ -57,27 +57,35 @@ def main() -> None:
 
     # 3) thread_id를 정합니다. checkpointer만으로는 "어느 대화에 저장할지"를 모릅니다.
     #    thread_id가 그 대화방 식별자입니다. config의 정해진 자리에 넣어 호출 때마다 함께 넘깁니다.
-    #    형식이 정확해야 합니다: {"configurable": {"thread_id": "..."}}
+    #    형식이 정확해야 합니다: 바깥 키 "configurable" 안에 다시 "thread_id" 키를 두는 2단 중첩 딕셔너리입니다.
+    #    (이 중첩 구조를 지키지 않으면 thread_id가 무시되어 메모리가 동작하지 않습니다.)
     config = {"configurable": {"thread_id": "user-123"}}
+    print("[thread_id]", config["configurable"]["thread_id"])  # 중첩 딕셔너리에서 값을 꺼내는 방법
 
     # 4) 첫 번째 턴: 이름을 알려 줍니다. 이 대화가 thread_id=user-123에 저장됩니다.
+    print("\n[1턴] 보냄  :", "내 이름은 앤디야. 기억해 줘.")
     r1 = agent.invoke(
         {"messages": [{"role": "user", "content": "내 이름은 앤디야. 기억해 줘."}]},
         config,  # 두 번째 인자로 config를 넘기면, 그 thread_id에 상태가 저장됩니다.
     )
-    print("[1턴]", r1["messages"][-1].content)  # 예: 네, 앤디님 기억하겠습니다.
+    print("[1턴] 답변  :", r1["messages"][-1].content)  # 예: 네, 앤디님 기억하겠습니다.
+    print("[1턴] 누적 메시지 수:", len(r1["messages"]))  # 1턴 user·ai가 thread에 쌓입니다.
 
     # 5) 두 번째 턴: 같은 config(같은 thread_id)로 이름을 물어봅니다.
     #    저장돼 있던 1턴 메시지가 복원되어 이번 입력 앞에 붙으므로, 모델은 앞 대화를 봅니다.
+    print("\n[2턴] 보냄  :", "내 이름이 뭐였지?", "(같은 thread_id로 호출)")
     r2 = agent.invoke(
         {"messages": [{"role": "user", "content": "내 이름이 뭐였지?"}]},
         config,  # 01 예제와 달리, 같은 thread_id를 넘기는 것이 핵심입니다.
     )
-    print("[2턴]", r2["messages"][-1].content)  # "앤디"라고 답하면 단기 메모리가 동작한 것입니다.
+    print("[2턴] 답변  :", r2["messages"][-1].content)  # "앤디"라고 답하면 단기 메모리가 동작한 것입니다.
 
     # 6) 누적 메시지가 실제로 쌓였는지 확인합니다.
     #    1턴(user·ai) + 2턴(user·ai) = 4개 이상이면 상태가 이어진 것입니다.
-    print("[누적 메시지 수]", len(r2["messages"]))
+    print("[2턴] 누적 메시지 수:", len(r2["messages"]), "(1턴 user·ai + 2턴 user·ai 누적)")
+
+    # 01 예제(메모리 없음, 매번 2개)와 대비합니다.
+    print("\n[비교] 같은 thread_id로 호출하면 1턴 대화가 복원되어 2턴 입력 앞에 붙습니다(맥락 유지).")
 
     # 체크포인트:
     #   - 2턴에서 "앤디"가 나오고 누적 수가 4 이상이면 멀티턴 맥락 유지에 성공한 것입니다.

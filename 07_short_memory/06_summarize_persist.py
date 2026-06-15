@@ -42,10 +42,11 @@ def add(a: int, b: int) -> int:
 def run_summarization() -> None:
     """요약 미들웨어를 붙여, 여러 턴을 주고받아도 누적 메시지가 폭증하지 않게 한다."""
     # SummarizationMiddleware는 대화가 길어지면 자동으로 앞부분을 요약문으로 대체합니다.
+    # trigger·keep은 ("기준", 개수) 형태의 튜플입니다. 튜플은 () 안에 값을 쉼표로 묶은, 바꿀 수 없는 묶음입니다.
     summarizer = SummarizationMiddleware(
         model=MODEL,                # 요약을 수행할 모델 (본 대화 모델과 같아도 됩니다)
-        trigger=("messages", 6),    # 메시지가 6개를 넘으면 요약을 발동합니다
-        keep=("messages", 4),       # 최근 4개는 원문 그대로 남기고, 그 앞을 요약합니다
+        trigger=("messages", 6),    # 메시지가 6개를 넘으면 요약을 발동합니다 ("messages" 기준 6개)
+        keep=("messages", 4),       # 최근 4개는 원문 그대로 남기고, 그 앞을 요약합니다 ("messages" 기준 4개)
     )
 
     # checkpointer로 누적된 대화를 요약 미들웨어가 관리하도록 함께 붙입니다.
@@ -63,13 +64,18 @@ def run_summarization() -> None:
     # 여러 턴을 주고받아 메시지를 쌓습니다 (trigger 임계치를 넘기기 위해).
     topics = ["내 이름은 앤디야.", "나는 서울에 살아.", "취미는 등산이야.", "방금 말한 내 정보를 요약해 줘."]
     out = None
-    for t in topics:
+    # enumerate는 리스트를 돌면서 (순번, 값)을 함께 돌려줍니다. start=1이면 순번을 1부터 셉니다.
+    for turn, t in enumerate(topics, start=1):
         out = agent.invoke({"messages": [{"role": "user", "content": t}]}, config)
+        # 턴마다 누적 메시지 수를 찍어, 요약 발동 후 수가 폭증하지 않고 눌리는지 관찰합니다.
+        snapshot = agent.get_state(config)
+        print(f"  [{turn}턴] 보냄: {t!r} / 누적 메시지 수: {len(snapshot.values['messages'])}")
     print("[요약 활용 답변]", out["messages"][-1].content)  # 앞 대화를 기억해 요약하면 정상
 
     # 압축이 일어났는지 상태로 확인합니다. 요약 후에는 누적 메시지 수가 무한정 늘지 않습니다.
     state = agent.get_state(config)
-    print("[요약 후 누적 메시지 수]", len(state.values["messages"]))
+    print("[요약 후 누적 메시지 수]", len(state.values["messages"]),
+          "(4턴=user·ai 8개로 단순 누적되지 않고 요약으로 눌림)")
 
     # 체크포인트: 4턴을 주고받아도 누적 메시지가 폭증하지 않고 요약 답변이 나오면 압축이 동작하는 것입니다.
 

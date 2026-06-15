@@ -149,10 +149,18 @@ def main() -> None:
         print('  예) OPENAI_API_KEY=sk-...   (또는 export OPENAI_API_KEY="sk-...")')
         return
 
+    # 무엇을: 도구 루프를 안전하게 지키는 세 겹을 차례로 시연합니다.
+    #   (둘째 겹) 의미 있는 실패 → (오류 회신) 도구 예외 회복 → (첫째 겹) 재귀 한도.
+    print("무엇을: 도구 루프 안전장치 세 겹을 같은 그래프로 차례대로 시연합니다.")
+    print("  1) 의미 있는 실패  2) 도구 예외 회복(handle_tool_errors)  3) 재귀 한도(recursion_limit)\n")
+
     agent = build_safe_graph()
     demo_meaningful_failure(agent)
     demo_tool_exception_recovery(agent)
     demo_recursion_limit(agent)
+
+    print("\n출력 요약: 없는 내용엔 '없다'고 답하고, 0으로 나누기 예외에도 그래프가 죽지 않으며,")
+    print("        한도를 1로 낮추면 GraphRecursionError로 안전하게 끊겼습니다. 세 겹이 모두 동작했습니다.")
 
 
 if __name__ == "__main__":

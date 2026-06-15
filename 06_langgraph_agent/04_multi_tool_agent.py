@@ -32,9 +32,11 @@ MODEL = "openai:gpt-5.4-mini"
 # 도구 1 — 재고 조회. args_schema로 인자의 의미·예시를 명시해 모델이 정확히 채우게 돕습니다.
 # ---------------------------------------------------------------------------
 
+# BaseModel을 상속하면 "도구 인자의 형태"를 한 클래스로 선언할 수 있습니다(필드 = 인자).
 class InventoryInput(BaseModel):
     # Field의 description은 모델에게 "이 인자에 무엇을 넣어야 하는지" 알려 주는 설명입니다.
     sku: str = Field(description="조회할 제품 코드. 예: 'BAT-21700'")
+    # Field의 첫 인자(여기 "ICN")는 기본값입니다. 모델이 창고를 안 정하면 ICN으로 채웁니다.
     warehouse: str = Field("ICN", description="창고 코드. 예: 'ICN'(인천), 'PUS'(부산)")
 
 
@@ -42,6 +44,8 @@ class InventoryInput(BaseModel):
 _STOCK = {("BAT-21700", "ICN"): 1240, ("BAT-21700", "PUS"): 380}
 
 
+# @tool의 첫 인자("check_inventory")는 도구 이름, args_schema는 위에서 만든 인자 스키마입니다.
+# 이렇게 묶으면 모델이 인자 이름·설명·기본값을 정확히 보고 호출을 채울 수 있습니다.
 @tool("check_inventory", args_schema=InventoryInput)
 def check_inventory(sku: str, warehouse: str = "ICN") -> str:
     """지정한 창고의 제품 재고 수량을 조회한다."""
@@ -88,7 +92,13 @@ def main() -> None:
 
     agent = build_agent()
 
+    # 무엇을: 도구가 둘 이상일 때, 모델이 질문을 보고 "어떤 도구를 어떤 순서로 부를지" 스스로 라우팅하는 모습을 봅니다.
+    print("무엇을: 도구 두 개(재고 조회 / 보충 판단) 중 모델이 알맞은 것을 골라 순서대로 엮는 라우팅을 관찰합니다.")
+    print("쓸 수 있는 도구: check_inventory(재고 조회), restock_threshold(보충 판단)")
+
     # 부산(PUS) 창고 재고는 380개로 임계치 500보다 적습니다 → 보충 필요로 결론나야 합니다.
+    print('\n입력: "BAT-21700 부산(PUS) 창고 재고가 보충이 필요한지 확인해줘"')
+    print("예상 라우팅: check_inventory(PUS)로 380개 확인 → 그 380을 restock_threshold에 넣어 보충 판단")
     print("=== 도구 두 개를 순서대로 부르는 질문 (재고 조회 → 보충 판단) ===")
     res = agent.invoke(
         {"messages": [{"role": "user",
@@ -96,8 +106,16 @@ def main() -> None:
     )
     print("최종 답변:", res["messages"][-1].content)
 
+    # 모델이 실제로 어떤 도구를 어떤 순서로 골랐는지만 따로 추려, 라우팅 결정을 한눈에 보여 줍니다.
+    print("\n[모델이 고른 도구 호출 순서 — 라우팅 결정만 추림]")
+    step = 0
+    for m in res["messages"]:
+        for call in getattr(m, "tool_calls", None) or []:  # AIMessage에만 tool_calls가 담깁니다
+            step += 1
+            print(f"  {step}) {call['name']}({call['args']}) 호출")
+
     # 누적 메시지를 보면 모델이 도구를 어떤 순서로 골라 불렀는지가 그대로 드러납니다.
-    print("\n[누적된 메시지 흐름 — 모델이 고른 도구 호출 순서]")
+    print("\n[누적된 메시지 흐름 — 호출과 관찰이 번갈아 쌓인 전체]")
     for m in res["messages"]:
         m.pretty_print() if hasattr(m, "pretty_print") else print(m)
 

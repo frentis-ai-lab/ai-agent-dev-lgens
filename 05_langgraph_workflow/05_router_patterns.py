@@ -82,9 +82,13 @@ def run_classify_router(model) -> None:
     b.add_edge("general", END)
     graph = b.compile()
 
+    # 세 문의를 차례로 넣어, 모델이 매긴 category에 따라 서로 다른 전문 노드로 갈라지는지 봅니다.
     for q in ["환불받고 싶어요", "앱이 자꾸 꺼져요", "영업시간이 언제인가요"]:
         result = graph.invoke({"messages": [HumanMessage(q)], "category": ""})
-        print(f"[{q}] -> {result['category']}:", result["messages"][-1].content)
+        # category = 분류 노드가 채운 키 = 다음에 거친 전문 노드의 이름
+        print(f"  [{q}]")
+        print(f"     classify가 매긴 category='{result['category']}' → '{result['category']}' 노드로 분기")
+        print(f"     응답: {result['messages'][-1].content}")
 
     # 체크포인트: 문의 내용에 따라 환불/기술/일반 노드로 각각 갈라지면 분류 라우터가 동작한 것입니다.
 
@@ -129,9 +133,12 @@ def run_value_router() -> None:
     b.add_edge("manual_review", END)
     graph = b.compile()
 
+    # 임계치(100,000원)를 기준으로 작은 금액과 큰 금액을 각각 넣어, 경로가 갈리는지 봅니다.
     for amount in [30_000, 250_000]:
         result = graph.invoke({"amount": amount, "decision": ""})
-        print(f"[{amount:,}원]", result["decision"])
+        # 임계치와 비교해 어느 노드로 갔는지 함께 보여 줍니다.
+        branch = "manual_review" if amount >= 100_000 else "auto_approve"
+        print(f"  [{amount:,}원] 임계치 100,000원과 비교 → '{branch}' 노드 → {result['decision']}")
 
     # 체크포인트: 임계치 미만은 자동 승인, 이상은 사람 검토로 갈리면 조건 분기 라우터가 동작한 것입니다.
     # 분류 라우터는 모델 판단으로, 이 조건 분기 라우터는 상태 수치로 경로를 정한다는 차이가 핵심입니다.
@@ -175,7 +182,9 @@ def run_dynamic_flow() -> None:
     # 시작 점수가 낮을수록 목표 도달까지 더 많이 반복합니다 (경로가 데이터에 따라 동적으로 변함).
     for start in [70, 10]:
         result = graph.invoke({"score": start, "attempts": 0})
-        print(f"[시작 {start}점] 최종 {result['score']}점, 반복 {result['attempts']}회")
+        # improve 노드는 매번 +30점, route는 80점 미만이면 다시 improve로 되돌립니다.
+        print(f"  [시작 {start}점] improve 노드가 +30점씩 반복 (목표 80점)")
+        print(f"     → 최종 {result['score']}점, improve를 {result['attempts']}회 거침")
 
     # 체크포인트: 시작 점수에 따라 반복 횟수가 달라지면 동적 데이터 흐름을 확인한 것입니다.
     # 변형 포인트: 목표 점수(80)나 증가폭(30)을 바꾸면 반복 횟수가 즉시 달라집니다.

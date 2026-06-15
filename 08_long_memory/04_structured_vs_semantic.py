@@ -18,17 +18,19 @@
 키가 없으면 안내만 출력하고 종료합니다 (문법·import 점검은 키 없이도 됩니다).
 """
 
-import os
+import os  # 환경변수(OPENAI_API_KEY) 확인에 씁니다.
 
-from dotenv import load_dotenv
-from langchain.embeddings import init_embeddings
-from langgraph.store.memory import InMemoryStore
+from dotenv import load_dotenv  # .env 파일을 환경변수로 올려 줍니다.
+from langchain.embeddings import init_embeddings  # "벤더:모델명" → 임베딩 모델 객체
+from langgraph.store.memory import InMemoryStore  # 장기 메모리 저장소
 
 load_dotenv()
 
 EMBED = "openai:text-embedding-3-small"
 
 
+# 함수 인자 store 뒤의 ": InMemoryStore"는 "이 자리에 Store 객체가 온다"는 타입 힌트(설명용)입니다.
+# 화살표 뒤 "-> None"은 "값을 돌려주지 않는다"는 표시입니다.
 def structured_memory(store: InMemoryStore) -> None:
     """구조형 기억: 분명한 키·필드로 저장하고 키로 정확히 꺼낸다."""
     # 구조형 기억은 의미가 분명한 키와 필드로 값을 정확히 저장하고, 키로 정확히 꺼냅니다.
@@ -44,14 +46,16 @@ def structured_memory(store: InMemoryStore) -> None:
         "timezone": "Asia/Seoul",
     })
 
-    # 키를 알므로 get으로 정확 조회합니다 (search query가 아님).
+    # 키를 알므로 get으로 정확 조회합니다 (search query가 아님). .value에 저장한 dict가 들어 있습니다.
     settings = store.get(profile_ns, "settings").value
-    print("[구조형] language =", settings["language"], "/ tone =", settings["tone"])
+    print("[구조형] key 'settings'로 정확 조회:")
+    print("    language =", settings["language"], "/ tone =", settings["tone"])
 
     # 설정을 바꿀 때도 같은 키에 덮어써 한 항목만 갱신합니다 (어디를 고칠지 분명).
-    # {**settings, "tone": "casual"} 는 기존 값을 그대로 펼치고 tone만 바꾼 새 dict입니다.
+    # {**settings, "tone": "casual"} 의 **는 "기존 dict의 키:값을 그대로 펼쳐 넣어라"는 표시입니다.
+    #   → 나머지 필드는 그대로 두고 tone만 "casual"로 바꾼 새 dict가 만들어집니다.
     store.put(profile_ns, "settings", {**settings, "tone": "casual"})
-    print("[구조형] 갱신 후 tone =", store.get(profile_ns, "settings").value["tone"])
+    print("    tone만 갱신 → tone =", store.get(profile_ns, "settings").value["tone"])
 
     # 체크포인트: 키로 정확히 같은 값을 꺼내고, 한 필드만 정확히 갱신되면 구조형을 이해한 것입니다.
 
@@ -66,9 +70,10 @@ def semantic_memory(store: InMemoryStore) -> None:
     store.put(notes_ns, "n1", {"text": "앤디는 회의 요약을 짧게 받는 걸 선호한다"})
     store.put(notes_ns, "n2", {"text": "앤디는 알림을 오전에만 받고 싶어 한다"})
 
-    print("[시맨틱] '요약 길이 취향' 검색:")
+    print("[시맨틱] query '요약 길이 취향'으로 근사 회상 (키를 몰라도 됨):")
     for it in store.search(notes_ns, query="요약 길이 취향", limit=1):
-        print("  -", round(it.score, 3), it.value["text"])  # n1이 매칭 (단어가 안 겹쳐도 의미로)
+        # query에 '요약'만 겹치고 '짧게'는 단어가 다른데도 n1이 회상되면 의미 기반 매칭입니다.
+        print("    유사도", round(it.score, 3), "|", it.value["text"])
 
     # 체크포인트: 단어가 겹치지 않아도 의미로 회상되면 시맨틱 기억을 이해한 것입니다.
 

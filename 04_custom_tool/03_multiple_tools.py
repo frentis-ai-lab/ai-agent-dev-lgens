@@ -71,10 +71,12 @@ def run_tool_loop(model_with_tools, messages: list, tool_map: dict) -> str:
     while ai.tool_calls:                         # 부를 도구가 남아 있는 동안 반복
         for call in ai.tool_calls:
             chosen = tool_map[call["name"]]      # 요청한 이름의 도구 선택
+            print(f"    → 모델이 고른 도구: {call['name']}, 인자: {call['args']}")  # 라우팅 결과 관찰
             try:
                 result = chosen.invoke(call["args"])
             except ToolException as e:
                 result = str(e)                  # 실패도 결과로 전달해 모델이 회복하게 함
+            print(f"    ← 도구 실행 결과: {result}")  # 모델에게 되돌릴 관찰 결과
             # tool_call_id를 요청 id와 똑같이 맞춰야 모델이 결과를 짝지을 수 있습니다.
             messages.append(ToolMessage(content=str(result), tool_call_id=call["id"]))
         ai = model_with_tools.invoke(messages)   # 결과가 담긴 메시지로 다시 호출
@@ -88,7 +90,10 @@ def route_among_tools(model) -> None:
     tool_map = {t.name: t for t in tools}        # 이름으로 도구를 찾기 위한 사전
     model_with_tools = model.bind_tools(tools)
 
+    print("붙인 도구:", list(tool_map), "(모델이 질문을 보고 둘 중 하나를 고릅니다)\n")
+
     # (1) 재고 질문 → check_inventory로 라우팅되어야 합니다.
+    print("(1) 질문:", "BAT-21700 인천 창고 재고 알려줘", "(재고 의도)")
     재고답 = run_tool_loop(
         model_with_tools,
         [HumanMessage("BAT-21700 인천 창고 재고 알려줘")],
@@ -97,6 +102,7 @@ def route_among_tools(model) -> None:
     print("[재고]", 재고답)                       # 예: ICN 창고의 BAT-21700 재고는 1,240개입니다.
 
     # (2) 환산 질문 → convert_currency로 라우팅되어야 합니다.
+    print("\n(2) 질문:", "100 달러는 원화로 얼마야?", "(환산 의도)")
     환산답 = run_tool_loop(
         model_with_tools,
         [HumanMessage("100 달러는 원화로 얼마야?")],

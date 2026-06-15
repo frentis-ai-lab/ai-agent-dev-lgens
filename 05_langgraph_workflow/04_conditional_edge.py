@@ -40,8 +40,11 @@ def show_router_only() -> None:
         # len(...)은 글자 수를 셉니다. 삼항식 "A if 조건 else B"는 조건이 참이면 A, 아니면 B입니다.
         return "summarize" if len(state["text"]) > 20 else "end"
 
-    print("[짧은 입력] route ->", route({"text": "안녕"}))
-    print("[긴 입력]   route ->", route({"text": "오늘 회의에서 신제품 출시 일정과 마케팅 예산을 논의했다"}))
+    short_text = "안녕"
+    long_text = "오늘 회의에서 신제품 출시 일정과 마케팅 예산을 논의했다"
+    # 같은 라우터 함수에 길이가 다른 입력을 넣어, 돌려주는 키가 어떻게 갈리는지 봅니다.
+    print(f"  [짧은 입력] {len(short_text)}자 → route -> {route({'text': short_text})!r}")
+    print(f"  [긴 입력]   {len(long_text)}자 → route -> {route({'text': long_text})!r}")
 
     # 체크포인트: 입력에 따라 라우터가 다른 문자열을 돌려주면, 라우터는 '분기 판단 함수'임을 이해한 것입니다.
 
@@ -80,15 +83,17 @@ def run_conditional_graph(model) -> None:
     b.add_edge("summarize", END)
     graph = b.compile()
 
-    print("[긴 입력] summarize 노드를 거칩니다:")
-    long_result = graph.invoke(
-        {"messages": [HumanMessage("오늘 회의에서 신제품 출시 일정과 마케팅 예산을 논의했다")]}
-    )
-    print("  ", long_result["messages"][-1].content)
+    long_text = "오늘 회의에서 신제품 출시 일정과 마케팅 예산을 논의했다"
+    print(f"[긴 입력] {len(long_text)}자 → 경로: START → classify → (route='summarize') → summarize → END")
+    long_result = graph.invoke({"messages": [HumanMessage(long_text)]})
+    print("   요약 결과:", long_result["messages"][-1].content)
+    print("   누적 메시지 수:", len(long_result["messages"]), "(입력 + 요약 AIMessage)")
 
-    print("[짧은 입력] summarize 없이 바로 종료합니다:")
-    short_result = graph.invoke({"messages": [HumanMessage("안녕")]})
-    print("  ", short_result["messages"][-1].content)  # 모델 호출 없이 입력 그대로 반환
+    short_text = "안녕"
+    print(f"\n[짧은 입력] {len(short_text)}자 → 경로: START → classify → (route='end') → END")
+    short_result = graph.invoke({"messages": [HumanMessage(short_text)]})
+    print("   최종 메시지:", short_result["messages"][-1].content)  # 모델 호출 없이 입력 그대로 반환
+    print("   누적 메시지 수:", len(short_result["messages"]), "(입력 그대로 — summarize를 건너뜀)")
 
     # 체크포인트: 짧은 입력은 route가 "end"를 돌려 모델 호출 없이 끝나면 분기가 동작한 것입니다.
     # 변형 포인트: route의 기준 길이(20)만 바꾸면 분기 경계가 이동합니다.
